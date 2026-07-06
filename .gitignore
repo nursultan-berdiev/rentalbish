@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+backend/media/
+backend/.env
+backend/.env.prod
+
+# Node / React
+node_modules/
+dist/
+*.local
+
+# Прочее
+.DS_Store

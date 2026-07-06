@@ -1,0 +1,71 @@
+# Prod-окружение. Запуск: docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - ./backend/.env.prod
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  api:
+    build: ./backend
+    restart: always
+    command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000
+    env_file:
+      - ./backend/.env.prod
+    volumes:
+      - media_data:/app/media
+    expose:
+      - "8000"
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: ./backend
+    restart: always
+    command: celery -A app.core.celery_app.celery_app worker --loglevel=info
+    environment:
+      RUN_MIGRATIONS: "0"
+    env_file:
+      - ./backend/.env.prod
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      - db
+      - redis
+
+  beat:
+    build: ./backend
+    restart: always
+    command: celery -A app.core.celery_app.celery_app beat --loglevel=info
+    environment:
+      RUN_MIGRATIONS: "0"
+    env_file:
+      - ./backend/.env.prod
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    build: ./nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - media_data:/usr/share/nginx/media:ro
+    depends_on:
+      - api
+
+volumes:
+  pg_data:
+  redis_data:
+  media_data:

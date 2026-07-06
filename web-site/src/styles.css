@@ -1,0 +1,96 @@
+/* Нейтральная вёрстка-заглушка публичного сайта. Дизайн придёт позже. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #fafafa;
+  color: #1a1a1a;
+}
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.hero {
+  text-align: center;
+  padding: 32px 0;
+}
+.hero h1 {
+  margin: 0 0 8px;
+}
+.muted {
+  color: #888;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+.tile {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+.tile img,
+.tile-noimg {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #eee;
+}
+.tile h3 {
+  font-size: 15px;
+  margin: 8px 0 4px;
+}
+.tile-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.order {
+  margin-top: 32px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+.order form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+input,
+textarea {
+  padding: 9px 11px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+button {
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2d6cdf;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+}
+.error {
+  color: #c0392b;
+  font-size: 13px;
+  margin: 0;
+}
