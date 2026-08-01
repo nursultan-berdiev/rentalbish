@@ -1,4 +1,8 @@
-# Dev-окружение. Запуск: docker compose up --build
+# Dev-окружение целиком: БД, API, MCP, воркер, оба фронта и reverse-proxy.
+# Запуск: docker compose up -d --build  → поднимается вся связка на http://<host>/
+#   /            витрина (web-site)
+#   /admin       админка (web-admin)
+#   /api, /media backend
 services:
   db:
     image: postgres:16-alpine
@@ -7,17 +11,19 @@ services:
       POSTGRES_PASSWORD: rental
       POSTGRES_DB: rental
     ports:
-      - "5433:5432"
+      - "5460:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
-      - "6380:6379"
+      - "6390:6379"
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
   api:
     build: ./backend
@@ -28,10 +34,33 @@ services:
       - ./backend:/app
       - media_data:/app/media
     ports:
-      - "8000:8000"
+      - "8010:8000"
+    # default — к своим db/redis; claude_net — чтобы ИИ-ассистент ходил в
+    # claude-gateway (http://claude_gw_api:8080) на подписке, без API-ключа.
+    networks:
+      - default
+      - claude_net
     depends_on:
       - db
       - redis
+    restart: unless-stopped
+
+  # MCP-сервер инструментов ассистента — к нему ходит claude-gateway на claude_net.
+  mcp:
+    build: ./backend
+    command: uvicorn app.mcp.http_server:app --host 0.0.0.0 --port 9000
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    networks:
+      default:
+      claude_net:
+        aliases:
+          - rentalbish_mcp
+    depends_on:
+      - db
+    restart: unless-stopped
 
   worker:
     build: ./backend
@@ -46,8 +75,53 @@ services:
     depends_on:
       - db
       - redis
+    restart: unless-stopped
+
+  # --- Фронты (Vite dev-серверы с hot-reload) ---
+  # Анонимный том на /app/node_modules обязателен: bind-моунт исходников иначе
+  # затирает зависимости, установленные в образе.
+  web-admin:
+    build:
+      context: ./web-admin
+      dockerfile: ../deploy/frontend.Dockerfile
+    volumes:
+      - ./web-admin:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+  web-site:
+    build:
+      context: ./web-site
+      dockerfile: ../deploy/frontend.Dockerfile
+    volumes:
+      - ./web-site:/app
+      - /app/node_modules
+    ports:
+      - "5174:5174"
+    restart: unless-stopped
+
+  # --- Единый домен ---
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+      - web-admin
+      - web-site
+    restart: unless-stopped
 
 volumes:
   pg_data:
   redis_data:
   media_data:
+
+networks:
+  # Внешняя сеть шлюза claude-gateway (создаётся его docker-compose).
+  claude_net:
+    external: true
+    name: claude_net

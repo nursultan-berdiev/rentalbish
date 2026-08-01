@@ -61,6 +61,15 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
+def create_short_token(subject: str, role: str, minutes: int = 5) -> str:
+    """Короткоживущий access-токен — для идентификации сотрудника в MCP-запросах.
+
+    Живёт минуты: его кладут в заголовок MCP-конфига на один диалог, дальше он
+    не нужен. Тип — access, чтобы MCP-сервер валидировал так же, как обычные токены.
+    """
+    return _create_token(subject, ACCESS_TOKEN, timedelta(minutes=minutes), extra={"role": role})
+
+
 def decode_token(token: str) -> dict:
     """Вернуть payload или бросить jwt.PyJWTError при невалидном токене."""
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])

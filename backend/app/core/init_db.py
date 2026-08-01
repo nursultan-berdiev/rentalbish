@@ -4,6 +4,7 @@ import logging
 
 from sqlalchemy import select
 
+from app.analytics.service import sync_builtin_widgets
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal
@@ -27,3 +28,9 @@ def seed_first_admin() -> None:
         db.add(admin)
         db.commit()
         logger.info("Создан первичный администратор: %s", settings.FIRST_ADMIN_LOGIN)
+
+
+def seed_dashboard() -> None:
+    """Синхронизировать встроенные блоки дашборда (идемпотентно)."""
+    with SessionLocal() as db:
+        sync_builtin_widgets(db)

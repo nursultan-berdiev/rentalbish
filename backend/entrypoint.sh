@@ -10,10 +10,15 @@ if [ -n "$POSTGRES_HOST" ]; then
   echo "Postgres доступен."
 fi
 
-# Применяем миграции (только процесс API; worker пропускает через RUN_MIGRATIONS=0)
+# Применяем миграции и сидим первичные данные (только процесс API; worker и mcp
+# пропускают через RUN_MIGRATIONS=0). Сид здесь, а не в lifespan приложения:
+# иначе при нескольких uvicorn-воркерах они гонятся за создание админа
+# (UniqueViolation по ix_users_login).
 if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
   echo "Применяю миграции..."
   alembic upgrade head
+  echo "Сид первичных данных..."
+  python -c "from app.core.init_db import seed_first_admin, seed_dashboard; seed_first_admin(); seed_dashboard()"
 fi
 
 exec "$@"

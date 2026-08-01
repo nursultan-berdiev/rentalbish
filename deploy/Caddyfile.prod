@@ -1,0 +1,46 @@
+# Прод: единый origin для rentalbish. Caddy слушает :80 внутри контейнера,
+# наружу публикуется один порт (см. docker-compose.prod.yml) — перед ним стоит
+# внешний Traefik, который терминирует TLS и отдаёт домен.
+#   /            → витрина  (статика /srv/site, SPA-fallback)
+#   /admin       → админка  (статика /srv/admin, base=/admin/, SPA-fallback)
+#   /api, /media → backend  (api:8000)
+
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	# Backend: API, медиа, health, swagger.
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /media/* {
+		reverse_proxy api:8000
+	}
+	handle /health {
+		reverse_proxy api:8000
+	}
+	handle /docs* {
+		reverse_proxy api:8000
+	}
+	handle /openapi.json {
+		reverse_proxy api:8000
+	}
+
+	# Админка под /admin (base=/admin/): срезаем префикс, дальше — статика с
+	# SPA-fallback на index.html (для deep-link'ов вроде /admin/products).
+	redir /admin /admin/
+	handle_path /admin/* {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Всё остальное — публичная витрина (SPA-fallback).
+	handle {
+		root * /srv/site
+		try_files {path} /index.html
+		file_server
+	}
+}

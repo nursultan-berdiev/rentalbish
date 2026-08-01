@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { clearTokens, getAccessToken } from "../api/client";
+import { clearTokens, ensureAccessToken } from "../api/client";
 import { fetchMe, type CurrentUser } from "../api/auth";
 
 interface AuthState {
@@ -16,7 +16,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
-    if (!getAccessToken()) {
+    // Заранее обновляем протухший токен — иначе /auth/me уйдёт с мёртвым и 401
+    // покраснеет в консоли.
+    if (!(await ensureAccessToken())) {
       setUser(null);
       setLoading(false);
       return;

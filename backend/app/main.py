@@ -3,20 +3,22 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.init_db import seed_first_admin
+from app.services.errors import DomainError
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Каталог для медиа (фото товаров) и сид администратора.
+    # Каталог для медиа (фото товаров). Сид первичных данных (админ, встроенные
+    # блоки дашборда) выполняется в entrypoint.sh до запуска воркеров — иначе
+    # несколько uvicorn-воркеров гонятся за создание админа.
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-    seed_first_admin()
     yield
 
 
@@ -27,13 +29,30 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+# В dev панель и витрину открывают не только по localhost, но и по имени хоста
+# или по IP (с телефона) — Origin тогда другой. Разрешаем любой хост на портах
+# фронтов. В prod регулярка задаётся явно через CORS_ORIGIN_REGEX.
+DEV_CORS_ORIGIN_REGEX = r"^https?://[^/]+:(5173|5174)$"
+
+cors_origin_regex = settings.CORS_ORIGIN_REGEX or (
+    DEV_CORS_ORIGIN_REGEX if settings.ENV == "dev" else None
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(DomainError)
+async def _domain_error_handler(_: Request, exc: DomainError) -> JSONResponse:
+    """Доменные ошибки сервисов → аккуратный HTTP-ответ."""
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

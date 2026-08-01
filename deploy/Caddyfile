@@ -1,0 +1,33 @@
+# Единый домен для dev-стенда rentalbish.
+# Caddy слушает :80 и раскладывает по путям на сервисы compose (по именам сервисов,
+# внутри общей сети — публиковать порты фронтов наружу для этого не требуется):
+#   /            → витрина  (web-site, Vite 5174)
+#   /admin       → админка  (web-admin, Vite 5173, base=/admin/)
+#   /api, /media → backend  (api, uvicorn 8000 внутри контейнера)
+# Порядок handle не важен: Caddy сортирует по специфичности пути.
+
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	# API и медиа — на backend.
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /media/* {
+		reverse_proxy api:8000
+	}
+
+	# Админка под /admin (голый /admin → на /admin/, дальше Vite).
+	redir /admin /admin/
+	handle /admin/* {
+		reverse_proxy web-admin:5173
+	}
+
+	# Всё остальное — публичная витрина.
+	handle {
+		reverse_proxy web-site:5174
+	}
+}

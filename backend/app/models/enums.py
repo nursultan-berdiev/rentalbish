@@ -18,6 +18,11 @@ class ProductType(enum.StrEnum):
     SET = "set"  # комплект/набор из нескольких товаров
 
 
+class MessageRole(enum.StrEnum):
+    USER = "user"  # реплика сотрудника
+    ASSISTANT = "assistant"  # ответ ИИ
+
+
 class BookingStatus(enum.StrEnum):
     NEW = "new"
     CONFIRMED = "confirmed"
@@ -38,3 +43,10 @@ class WriteOffReason(enum.StrEnum):
     BREAKAGE = "breakage"  # бой
     LOSS = "loss"  # утеря
     WEAR = "wear"  # износ
+
+
+class ClientSource(enum.StrEnum):
+    SITE = "site"  # заявка с сайта-витрины
+    CALL = "call"  # звонок
+    MESSENGER = "messenger"  # мессенджер
+    OTHER = "other"

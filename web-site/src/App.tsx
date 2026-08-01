@@ -1,55 +1,51 @@
-import { useEffect, useState } from "react";
-import { fetchCatalog, type CatalogProduct } from "./api";
-import OrderForm from "./OrderForm";
+import { useEffect } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
+
+import Header from "./components/Header";
+import Footer from "./sections/Footer";
+import WhatsAppFab from "./sections/WhatsAppFab";
+import Landing from "./pages/Landing";
+import CatalogPage from "./pages/CatalogPage";
+import CartPage from "./pages/CartPage";
+import ComingSoon from "./pages/ComingSoon";
+import { useSite } from "./site/SiteContext";
+
+/** При смене маршрута — наверх; если в адресе якорь секции — скроллим к ней. */
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      const el = document.querySelector(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
+    window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
+}
 
 export default function App() {
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "empty">("loading");
+  const { status } = useSite();
 
-  useEffect(() => {
-    fetchCatalog()
-      .then((data) => {
-        setProducts(data);
-        setStatus(data.length ? "ready" : "empty");
-      })
-      .catch(() => setStatus("empty")); // API/каталог ещё не готов — показываем заглушку
-  }, []);
+  // Пока статус не загрузился — не мигаем сайтом (и не показываем заглушку раньше
+  // времени). Режим обслуживания → заставка вместо всей витрины.
+  if (status === "loading") return null;
+  if (status === "down") return <ComingSoon />;
 
   return (
-    <div className="page">
-      <header className="hero">
-        <h1>Аренда посуды</h1>
-        <p>Выберите позиции и оставьте заявку — мы свяжемся с вами.</p>
-      </header>
-
-      <section className="catalog">
-        {status === "loading" && <p>Загрузка каталога...</p>}
-        {status === "empty" && (
-          <p className="muted">
-            Каталог появится после наполнения склада (Этапы 1–2). Форма заявки ниже уже работает.
-          </p>
-        )}
-        {status === "ready" && (
-          <div className="grid">
-            {products.map((p) => (
-              <article key={p.id} className="tile">
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.name} />
-                ) : (
-                  <div className="tile-noimg" />
-                )}
-                <h3>{p.name}</h3>
-                <div className="tile-meta">
-                  <span>{p.daily_price} / сутки</span>
-                  <span className="muted">в наличии: {p.available}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <OrderForm products={products} />
+    <div className="site">
+      <ScrollManager />
+      <Header />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/catalog" element={<CatalogPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="*" element={<Landing />} />
+      </Routes>
+      <Footer />
+      <WhatsAppFab />
     </div>
   );
 }
